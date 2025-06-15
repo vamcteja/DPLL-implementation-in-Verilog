@@ -1,0 +1,74 @@
+
+//1. Generate Random Value
+//2. Check Unassigned literal
+//3. if unassigned choose it else go to STEP-1
+
+
+module FINAL_RANDOM_GENERATION #(parameter WIDTH=8, parameter N=256) (
+	input clk,
+	input rst,
+	input ena,
+	input reset_valid_out,
+	input [N-1:0] lit_assigned,
+	input [WIDTH-1:0] prev_rand_val,
+	output reg [WIDTH-1:0] rand_val_out,
+	output reg valid_out
+);
+
+wire [WIDTH-1:0] new_rand_val;
+ 
+	GENERATE_RANDOM_VALUE #(.WIDTH(WIDTH)) gen_rand_val_inst1 (.prev_rand_val(prev_rand_val_generated), .rand_val(new_rand_val));
+
+ 
+wire [WIDTH-1:0] mux_rand_val;
+assign mux_rand_val = en ? new_rand_val : prev_rand_val;
+
+
+wire new_rand_val_unassigned; // says whether generated new random literal is unassigned or not
+	CHECK_UNASSIGNED_LITERAL #(.WIDTH(WIDTH), .N(N)) check_for_unassigned_inst1 (.random_value(mux_rand_val), .assigned_or_not(lit_assigned), .unassigned(new_rand_val_unassigned));
+always@(posedge clk)
+  begin
+	if(rst)
+	  begin
+		rand_val_out <= 1;
+		valid_out    <= 1;
+	  end
+	else
+	  begin
+		rand_val_out <= mux_rand_val;
+		valid_out    <= ~new_rand_val_unassigned;
+	  end
+  end
+endmodule
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module GENERATE_RANDOM_VALUE #(parameter WIDTH=8)
+(
+	input [WIDTH-1:0] prev_rand_val,
+	output [WIDTH-1:0] rand_val
+);
+
+wire feedback;
+ assign feedback = 
+        (WIDTH == 3)  ? prev_rand_val[2] ^ prev_rand_val[0]) :
+        (WIDTH == 4)  ? prev_rand_val[3] ^ prev_rand_val[0] :
+        (WIDTH == 5)  ? prev_rand_val[4] ^ prev_rand_val[2] :
+        (WIDTH == 6)  ? prev_rand_val[5] ^ prev_rand_val[0] :
+        (WIDTH == 7)  ? prev_rand_val[6] ^ prev_rand_val[0] :
+        (WIDTH == 8)  ? prev_rand_val[7] ^ prev_rand_val[5] ^ prev_rand_val[4] ^ prev_rand_val[3] :
+        (WIDTH == 9)  ? prev_rand_val[8] ^ prev_rand_val[4] : (prev_rand_val[9] ^ prev_rand_val[6]) ;  		
+assign rand_val = {prev_rand_val[WIDTH-2:0] , feedback} ;
+endmodule
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+module CHECK_UNASSIGNED_LITERAL #(parameter WIDTH=8, parameter N=256 )
+(
+	input [WIDTH-1:0] random_value,
+	input [N-1:0] assigned_or_not ,
+	output unassigned
+);
+assign unassigned = assigned_or_not[random_value];
+endmodule
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
